@@ -1,22 +1,9 @@
-# main.py
-
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List
 from supabase import create_client
 from openai import OpenAI
-from dotenv import load_dotenv
 import os
-
-# ── Load environment ──────────────────────────────
-load_dotenv()
-
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
 # ── FastAPI app ──────────────────────────────────
 app = FastAPI()
@@ -34,11 +21,21 @@ class QAEmbedResponse(BaseModel):
     question_embedding: List[float]
     answer_embedding: List[float]
 
-# ── Route ────────────────────────────────────────
+@app.get("/")
+def health_check():
+    return {"status": "ok"}
+
 @app.post("/qa-embed", response_model=QAEmbedResponse)
 def embed_question_and_answer(req: QAEmbedRequest):
-    # 1) Create embeddings
+    # Get env vars inside the request to ensure they're there
+    SUPABASE_URL = os.getenv("SUPABASE_URL")
+    SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
     try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        openai_client = OpenAI(api_key=OPENAI_API_KEY)
+
         question_resp = openai_client.embeddings.create(
             model="text-embedding-3-large",
             input=req.question
@@ -52,9 +49,9 @@ def embed_question_and_answer(req: QAEmbedRequest):
         answer_embedding = answer_resp.data[0].embedding
 
     except Exception as e:
+        print("Embedding error:", e)
         raise HTTPException(status_code=500, detail=f"Embedding error: {e}")
 
-    # 2) Insert both embeddings into Supabase
     try:
         supabase.table("ManagementAI_Embeddings").insert([
             {
@@ -68,7 +65,9 @@ def embed_question_and_answer(req: QAEmbedRequest):
                 "Embedding": answer_embedding
             }
         ]).execute()
+
     except Exception as e:
+        print("Supabase insert error:", e)
         raise HTTPException(status_code=500, detail=f"Supabase insert error: {e}")
 
     return {
