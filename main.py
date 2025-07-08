@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
 from supabase import create_client
@@ -7,6 +8,15 @@ import os
 
 # ── FastAPI app ──────────────────────────────────
 app = FastAPI()
+
+# ✅ Add CORS middleware to allow frontend to call your API
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Or restrict to your local dev URL or production domain
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ── Pydantic models ──────────────────────────────
 class QAEmbedRequest(BaseModel):
