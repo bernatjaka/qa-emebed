@@ -47,11 +47,11 @@ def embed_question_and_answer(req: QAEmbedRequest):
         openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
         question_resp = openai_client.embeddings.create(
-            model="text-embedding-3-large",
+            model="text-embedding-3-small",
             input=req.question
         )
         answer_resp = openai_client.embeddings.create(
-            model="text-embedding-3-large",
+            model="text-embedding-3-small",
             input=req.answer
         )
 
